@@ -1,13 +1,24 @@
 #!/usr/bin/python
 
-import proto.caffe_pb2 as caffe_pb2
+import caffe
+import os
+import pickle
+import struct
 import sys
 import numpy as np
 sys.dont_write_bytecode = True
 
-if len(sys.argv) < 3:
-    print "Usage: caffemodel.py <input_model_file> <output_model_file>"
+if len(sys.argv) < 4:
+    print "Usage: caffemodel.py <input_deploy_file> <input_model_file> <output_model_file>"
     sys.exit()
+else:
+    prototxt = sys.argv[1]
+    orig = sys.argv[2] # original model (alex.caffemodel)
+    comp = sys.argv[3] # compressed model (comp.caffemodel)
+    
+caffe.set_mode_gpu()
+net = caffe.Net(prototxt, orig, caffe.TEST)
+layers = filter(lambda x:'conv' in x or 'fc' in x or 'ip' in x, net.params.keys())
 
 # Extract boundary value at ratio x while sorting data
 def read_boundary_value_with_ratio(data, ratio):
@@ -29,30 +40,28 @@ def prune_dense(weight_arr, name="None", thresh=0.005, **kwargs):
 # How many percentages you want to apply pruning
 ratio = {"fc6":0.91, "fc7":0.91, "fc8":0.75}
 
-model_pb = caffe_pb2.NetParameter()
-f = open(sys.argv[1], "rb")
-model_pb.ParseFromString(f.read())
+for idx, layer in enumerate(ratio):
 
-layers = model_pb.layers
+    #print "layer name: ", i.name
+    print "layer name: ", layer
+    #print "width: ",      i.blobs[0].width
+    #print "height: ",     i.blobs[0].height
+    
+    temp2 = net.params[layer][0].data
+    temp = np.zeros(net.params[layer][0].shape, np.float32)
+    np.copyto(temp, temp2)
+    
+    nnz_before = np.sum(temp != 0)
+    
+    boundary = read_boundary_value_with_ratio(temp, ratio[layer])
+    temp = prune_dense(temp, name=layer, thresh=boundary)
+    
+    # re-write the compressed data on each network
+    np.copyto(net.params[layer][0].data, temp)
 
-for i in layers:
-    if "fc8" in i.name:
-        print "layer name: ", i.name
-        print "width: ",      i.blobs[0].width
-        print "height: ",     i.blobs[0].height
-        temp = np.array(i.blobs[0].data, dtype=float)
-        nnz_before = np.sum(temp != 0)
+    print "# of non-zero (before): ", nnz_before
+    print "# of non-zero (after): ", np.sum(temp != 0)
+    print ""
 
-        boundary = read_boundary_value_with_ratio(temp, ratio[i.name])
-        temp = prune_dense(temp, name=i.name, thresh=boundary)
-
-        # protobuf is immutable, which means cannot modify, thus delete and re-write it
-        i.blobs[0].ClearField("data")
-        i.blobs[0].data.extend(temp)
-
-        print "# of non-zero (before): ", nnz_before
-        print "# of non-zero (after): ", np.sum(temp != 0)
-        print ""
-
-f = open(sys.argv[2], "wb")
-f.write(model_pb.SerializeToString())
+net.save(comp)
+print " Compression is done! Output is dense model. "
