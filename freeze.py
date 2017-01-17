@@ -5,10 +5,12 @@ import sys
 import numpy as np
 sys.dont_write_bytecode = True
 
-prototxt = "models/train_val.prototxt"
-trained_model_file = "models/bvlc_alexnet.caffemodel" # original model
-# trained_model_file = "models/bvlc_alexnet_itq_exp4.caffemodel" # itq-trained model
-freezed_model_file = "models/output.caffemodel" # quantiezd model
+# prototxt = "models/bvlc_alexnet/train_val.prototxt"
+prototxt = "models/bvlc_alexnet/itq_exp4.prototxt"
+# trained_model_file = "models/bvlc_alexnet/bvlc_alexnet.caffemodel" # original model
+# trained_model_file = "models/bvlc_alexnet/bvlc_alexnet_itq_exp4.caffemodel" # itq-trained model
+trained_model_file = "models/bvlc_alexnet/caffe_alexnet_train_iter_15000.caffemodel" # original model
+freezed_model_file = "models/bvlc_alexnet/output.caffemodel" # quantiezd model
  
 caffe.set_mode_gpu()
 net = caffe.Net(prototxt, trained_model_file, caffe.TEST)
