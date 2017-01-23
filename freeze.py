@@ -10,8 +10,10 @@ trained_model_file = "models/bvlc_alexnet.caffemodel" # original model
 # trained_model_file = "models/bvlc_alexnet_itq_exp4.caffemodel" # itq-trained model
 freezed_model_file = "models/output.caffemodel" # quantiezd model
 
-prototxt = "./examples/cifar10/cifar10_itq_exp4.prototxt"
-trained_model_file = "./examples/cifar10/cifar10_exp4_iter_6600.caffemodel.h5" # original model
+prototxt = "./examples/cifar10/cifar10_full_train_test.prototxt"
+# prototxt = "./examples/cifar10/cifar10_itq_exp4.prototxt"
+trained_model_file = "./examples/cifar10/cifar10_exp4_iter_132000.caffemodel.h5"
+# trained_model_file = "./examples/cifar10/cifar10_full_iter_70000.caffemodel.h5" # original model
 freezed_model_file = "./examples/cifar10/output.caffemodel" # quantiezd model
  
 caffe.set_mode_gpu()
@@ -52,10 +54,11 @@ def quantize2exp(weight_arr, bitwidth=4, **kwargs):
 
 # Quantizaiton all conv, fc layers
 for idx, layer in enumerate(layers):
-    print "layer name: ", layer
-
     weight_data = net.params[layer][0].data
-    weight_data = quantize2exp_full(weight_data, bitwidth=4)
+
+    if layer != "conv1":
+        print "layer name: ", layer
+        weight_data = quantize2exp_full(weight_data, bitwidth=3)
     np.copyto(net.params[layer][0].data, weight_data)
 
     print "Quantization done: %s" % layer
