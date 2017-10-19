@@ -27,7 +27,7 @@ def prune_dense(weight_arr, name="None", thresh=0.005, **kwargs):
     return weight_arr
 
 # How many percentages you want to apply pruning
-ratio = {"fc6":0.91, "fc7":0.91, "fc8":0.75}
+ratio = {"conv1":0.75, "conv2":0.75, "conv3":0.75, "fc6":0.90, "fc7":0.90, "fc8":0.90}
 
 model_pb = caffe_pb2.NetParameter()
 f = open(sys.argv[1], "rb")
@@ -36,7 +36,7 @@ model_pb.ParseFromString(f.read())
 layers = model_pb.layers
 
 for i in layers:
-    if "fc8" in i.name:
+    if (i.name in ratio.keys()):
         print "layer name: ", i.name
         print "width: ",      i.blobs[0].width
         print "height: ",     i.blobs[0].height
